@@ -534,7 +534,8 @@ async function parseFilterOptions() {
       "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007",
       "2006", "2005", "2004", "2003", "2002", "2001", "2000", "1999", "1998", "1997"
     ],
-    status: ["จบแล้ว", "ยังไม่จบ"]
+    status: ["จบแล้ว", "ยังไม่จบ"],
+    sort: ["latest", "title"]
   };
 
   try {
@@ -576,7 +577,8 @@ async function parseFilterOptions() {
     const result = {
       genres: genres.length > 0 ? genres : fallback.genres,
       years: years.length > 0 ? years : fallback.years,
-      status: status.length > 0 ? status : fallback.status
+      status: status.length > 0 ? status : fallback.status,
+      sort: ["latest", "title"]
     };
     cachedFilters = result;
     return result;

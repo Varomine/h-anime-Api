@@ -774,11 +774,19 @@
                     <option value="">All Statuses</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <label>Sort By</label>
+                <select id="filterSort">
+                    <option value="latest">Latest Releases</option>
+                    <option value="title">Alphabetical (A-Z)</option>
+                </select>
+            </div>
             <div class="filter-actions">
                 <button class="search-btn" style="padding: 8px 20px;" onclick="applyFilters()">Apply</button>
                 <button class="search-btn" style="padding: 8px 20px; background:transparent; border:1px solid var(--border-color);" onclick="clearFilters()">Clear</button>
             </div>
         </div>
+
 
     </header>
 
@@ -1039,7 +1047,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
             <!-- Filters Endpoint -->
             <div class="doc-card">
@@ -1069,6 +1076,10 @@
   <span class="json-key">"status"</span>: [
     <span class="json-string">"จบแล้ว"</span>,
     <span class="json-string">"ยังไม่จบ"</span>
+  ],
+  <span class="json-key">"sort"</span>: [
+    <span class="json-string">"latest"</span>,
+    <span class="json-string">"title"</span>
   ]
 }
                         </div>
@@ -1119,7 +1130,7 @@
                                     <td class="param-name">sort</td>
                                     <td class="param-type">string</td>
                                     <td>No (default: latest)</td>
-                                    <td>Sorting order. E.g., 'latest'</td>
+                                    <td>Sorting order. Supported values: 'latest' (newest releases first), 'title' (alphabetical order A-Z).</td>
                                 </tr>
                                 <tr>
                                     <td class="param-name">page</td>
@@ -1212,6 +1223,7 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
         let filterGenre = '';
         let filterYear = '';
         let filterStatus = '';
+        let filterSort = 'latest';
         let activePlayer = null;
         let hlsInstance = null;
 
@@ -1272,6 +1284,7 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
                     if (filterGenre) params.push(`genres=${encodeURIComponent(filterGenre)}`);
                     if (filterYear) params.push(`years=${encodeURIComponent(filterYear)}`);
                     if (filterStatus) params.push(`status=${encodeURIComponent(filterStatus)}`);
+                    if (filterSort) params.push(`sort=${encodeURIComponent(filterSort)}`);
                     params.push(`page=${page}`);
                     url = `/api/filter?${params.join('&')}`;
                 } else if (currentView === 'search' && searchQuery) {
@@ -1293,6 +1306,7 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
                     if (filterGenre) activeFilters.push(`Genre: ${filterGenre}`);
                     if (filterYear) activeFilters.push(`Year: ${filterYear}`);
                     if (filterStatus) activeFilters.push(`Status: ${filterStatus}`);
+                    if (filterSort && filterSort !== 'latest') activeFilters.push(`Sort: ${filterSort === 'title' ? 'Alphabetical' : filterSort}`);
                     document.getElementById('gridTitle').textContent = `Filtered H-Anime - ${activeFilters.join(', ')} (Page ${page})`;
                 } else if (currentView === 'search') {
                     document.getElementById('gridTitle').textContent = `Search Results for: "${searchQuery}" (Page ${page})`;
@@ -1314,9 +1328,11 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
             document.getElementById('filterGenre').value = '';
             document.getElementById('filterYear').value = '';
             document.getElementById('filterStatus').value = '';
+            document.getElementById('filterSort').value = 'latest';
             filterGenre = '';
             filterYear = '';
             filterStatus = '';
+            filterSort = 'latest';
 
             if (!query) {
                 currentView = 'latest';
@@ -1384,8 +1400,9 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
             filterGenre = document.getElementById('filterGenre').value;
             filterYear = document.getElementById('filterYear').value;
             filterStatus = document.getElementById('filterStatus').value;
+            filterSort = document.getElementById('filterSort').value;
             
-            if (!filterGenre && !filterYear && !filterStatus) {
+            if (!filterGenre && !filterYear && !filterStatus && filterSort === 'latest') {
                 currentView = 'latest';
                 loadPage(1);
                 return;
@@ -1402,10 +1419,12 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
             document.getElementById('filterGenre').value = '';
             document.getElementById('filterYear').value = '';
             document.getElementById('filterStatus').value = '';
+            document.getElementById('filterSort').value = 'latest';
             
             filterGenre = '';
             filterYear = '';
             filterStatus = '';
+            filterSort = 'latest';
             
             currentView = 'latest';
             loadPage(1);
