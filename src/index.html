@@ -723,37 +723,7 @@
                     <span class="method-badge get">GET</span>
                     <span class="endpoint-path">/api/latest</span>
                 </div>
-                <div class="doc-desc">Fetch the list of latest releases from the main page.</div>
-                
-                <div class="doc-card-body">
-                    <div class="doc-left">
-                        <div class="params-title">No parameters required.</div>
-                    </div>
-                    <div class="doc-right">
-                        <div class="ex-header">Example Response</div>
-                        <div class="code-block">
-{
-  <span class="json-key">"currentPage"</span>: 1,
-  <span class="json-key">"totalPages"</span>: 51,
-  <span class="json-key">"results"</span>: [
-    {
-      <span class="json-key">"title"</span>: <span class="json-string">"Ookii Onnanoko wa Suki desu ka? 8/12"</span>,
-      <span class="json-key">"url"</span>: <span class="json-string">"https://www.alpha-hen.com/ookii-onnanoko-wa-suki-desu-ka/"</span>
-    }
-  ]
-}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Page Endpoint -->
-            <div class="doc-card">
-                <div class="doc-endpoint">
-                    <span class="method-badge get">GET</span>
-                    <span class="endpoint-path">/api/page</span>
-                </div>
-                <div class="doc-desc">Fetch paginated series releases.</div>
+                <div class="doc-desc">Fetch the list of latest releases from the main page (supports pagination).</div>
                 
                 <div class="doc-card-body">
                     <div class="doc-left">
@@ -772,7 +742,7 @@
                                     <td class="param-name">page</td>
                                     <td class="param-type">integer</td>
                                     <td>No (default: 1)</td>
-                                    <td>The page offset to load</td>
+                                    <td>The page number offset to load</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -781,10 +751,22 @@
                         <div class="ex-header">Example Response</div>
                         <div class="code-block">
 {
-  <span class="json-key">"currentPage"</span>: 2,
+  <span class="json-key">"currentPage"</span>: 1,
   <span class="json-key">"totalPages"</span>: 51,
-  <span class="json-key">"results"</span>: [...]
+  <span class="json-key">"results"</span>: [
+    {
+      <span class="json-key">"title"</span>: <span class="json-string">"Ookii Onnanoko wa Suki desu ka?"</span>,
+      <span class="json-key">"url"</span>: <span class="json-string">"https://www.alpha-hen.com/ookii-onnanoko-wa-suki-desu-ka/"</span>,
+      <span class="json-key">"thumbnail"</span>: <span class="json-string">"https://www.alpha-hen.com/wp-content/uploads/2026/04/325424.jpg"</span>,
+      <span class="json-key">"score"</span>: <span class="json-string">"6.45"</span>,
+      <span class="json-key">"tag"</span>: <span class="json-string">"Hentai"</span>,
+      <span class="json-key">"episodes"</span>: <span class="json-string">"8/12"</span>,
+      <span class="json-key">"status"</span>: <span class="json-string">"ยังไม่จบ"</span>,
+      <span class="json-key">"language"</span>: <span class="json-string">"ซับไทย"</span>
+    }
+  ]
 }
+                        </div>
                     </div>
                 </div>
             </div>
@@ -795,7 +777,7 @@
                     <span class="method-badge get">GET</span>
                     <span class="endpoint-path">/api/search</span>
                 </div>
-                <div class="doc-desc">Query and search the database for specific H-Anime.</div>
+                <div class="doc-desc">Scrapes the live search results from the website (supports pagination).</div>
                 
                 <div class="doc-card-body">
                     <div class="doc-left">
@@ -814,7 +796,13 @@
                                     <td class="param-name">q</td>
                                     <td class="param-type">string</td>
                                     <td>Yes</td>
-                                    <td>Search query string (e.g. "ookii")</td>
+                                    <td>Search query keyword</td>
+                                </tr>
+                                <tr>
+                                    <td class="param-name">page</td>
+                                    <td class="param-type">integer</td>
+                                    <td>No (default: 1)</td>
+                                    <td>The search results page number to load</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -823,12 +811,18 @@
                         <div class="ex-header">Example Response</div>
                         <div class="code-block">
 {
+  <span class="json-key">"currentPage"</span>: 1,
+  <span class="json-key">"totalPages"</span>: 1,
   <span class="json-key">"results"</span>: [
     {
       <span class="json-key">"title"</span>: <span class="json-string">"Ookii Onnanoko wa Suki desu ka?"</span>,
       <span class="json-key">"url"</span>: <span class="json-string">"https://www.alpha-hen.com/ookii-onnanoko-wa-suki-desu-ka/"</span>,
-      <span class="json-key">"thumbnail"</span>: <span class="json-string">"https://www.alpha-hen.com/wp-content/uploads/2026/04/325424-150x150.jpg"</span>,
-      <span class="json-key">"info"</span>: <span class="json-string">"Episodes: 8/12 | Score: 6.45"</span>
+      <span class="json-key">"thumbnail"</span>: <span class="json-string">"https://www.alpha-hen.com/wp-content/uploads/2026/04/325424.jpg"</span>,
+      <span class="json-key">"score"</span>: <span class="json-string">"6.45"</span>,
+      <span class="json-key">"tag"</span>: <span class="json-string">"Hentai"</span>,
+      <span class="json-key">"episodes"</span>: <span class="json-string">"8/12"</span>,
+      <span class="json-key">"status"</span>: <span class="json-string">"ยังไม่จบ"</span>,
+      <span class="json-key">"language"</span>: <span class="json-string">"ซับไทย"</span>
     }
   ]
 }
@@ -873,8 +867,11 @@
 {
   <span class="json-key">"episodes"</span>: [
     {
-      <span class="json-key">"title"</span>: <span class="json-string">"Ookii Onnanoko wa Suki desu ka TH ตอนที่ 01"</span>,
-      <span class="json-key">"url"</span>: <span class="json-string">"https://www.alpha-hen.com/watch/ookii-onnanoko-wa-suki-desu-ka-th-ตอนที่-01/"</span>
+      <span class="json-key">"title"</span>: <span class="json-string">"Ookii Onnanoko wa Suki desu ka"</span>,
+      <span class="json-key">"url"</span>: <span class="json-string">"https://www.alpha-hen.com/watch/ookii-onnanoko-wa-suki-desu-ka-th-ตอนที่-01/"</span>,
+      <span class="json-key">"episode"</span>: <span class="json-string">"ตอนที่ 01"</span>,
+      <span class="json-key">"duration"</span>: <span class="json-string">"06:50"</span>,
+      <span class="json-key">"type"</span>: <span class="json-string">"SUB"</span>
     }
   ]
 }
@@ -968,7 +965,7 @@
                     <div class="doc-right">
                         <div class="ex-header">Direct Stream Play Example (.m3u8)</div>
                         <div class="code-block" style="word-break: break-all;">
-http://localhost:8000/proxy/master.m3u8?url=https://qqhls1.stream-aph.xyz/media/qHUM4FSbcMO0EWk/1080p.m3u8&referer=https://qqstream.stream-aph.xyz/
+https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://qqhls1.stream-aph.xyz/media/qHUM4FSbcMO0EWk/1080p.m3u8&referer=https://qqstream.stream-aph.xyz/
                         </div>
                     </div>
                 </div>
