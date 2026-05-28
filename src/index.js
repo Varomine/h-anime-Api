@@ -207,8 +207,8 @@ async function parsePage(pageUrl) {
     const thumbnail = imgMatch ? imgMatch[1].trim() : '';
 
     // Get score
-    const scoreMatch = content.match(/class="[^"]*ez-card-score[^"]*"[^>]*>([^<]*)<\/span>/i);
-    const score = scoreMatch ? scoreMatch[1].trim() : '';
+    const scoreMatch = content.match(/class="[^"]*ez-card-score[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+    const score = scoreMatch ? scoreMatch[1].replace(/<[^>]*>/g, '').trim() : '';
 
     // Get title & main tag
     const titleHeaderMatch = content.match(/<h2[^>]*class="[^"]*ez-card-title[^"]*"[^>]*>([\s\S]*?)<\/h2>/i);
@@ -216,9 +216,9 @@ async function parsePage(pageUrl) {
     let tag = '';
     if (titleHeaderMatch) {
       const headerContent = titleHeaderMatch[1];
-      const tagMatch = headerContent.match(/<span[^>]*class="[^"]*al-ez-index-tag[^"]*"[^>]*>([^<]*)<\/span>/i);
+      const tagMatch = headerContent.match(/<span[^>]*class="[^"]*al-ez-index-tag[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
       if (tagMatch) {
-        tag = tagMatch[1].trim();
+        tag = tagMatch[1].replace(/<[^>]*>/g, '').trim();
         title = headerContent.replace(tagMatch[0], '').replace(/<[^>]*>/g, '').trim();
       } else {
         title = headerContent.replace(/<[^>]*>/g, '').trim();
@@ -228,13 +228,13 @@ async function parsePage(pageUrl) {
     title = title.replace(/\s+/g, ' ');
 
     // Get metadata badges
-    const epMatch = content.match(/class="[^"]*eit-bg1[^"]*"[^>]*>([^<]*)<\/span>/i);
-    const statusMatch = content.match(/class="[^"]*eit-bg2[^"]*"[^>]*>([^<]*)<\/span>/i);
-    const langMatch = content.match(/class="[^"]*eit-bg3[^"]*"[^>]*>([^<]*)<\/span>/i);
+    const epMatch = content.match(/class="[^"]*eit-bg1[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+    const statusMatch = content.match(/class="[^"]*eit-bg2[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+    const langMatch = content.match(/class="[^"]*eit-bg3[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
 
-    const episodes = epMatch ? epMatch[1].trim() : '';
-    const status = statusMatch ? statusMatch[1].trim() : '';
-    const language = langMatch ? langMatch[1].trim() : '';
+    const episodes = epMatch ? epMatch[1].replace(/<[^>]*>/g, '').trim() : '';
+    const status = statusMatch ? statusMatch[1].replace(/<[^>]*>/g, '').trim() : '';
+    const language = langMatch ? langMatch[1].replace(/<[^>]*>/g, '').trim() : '';
 
     series.push({
       title,
