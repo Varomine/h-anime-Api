@@ -332,13 +332,14 @@ async function parseEpisodes(seriesUrl) {
     const innerHtml = match[3];
 
     if (innerHtml.includes('class="ep-content"') || innerHtml.includes("class='ep-content'")) {
-      const ytaMatch = innerHtml.match(/class="[^"]*y-t-a[^"]*"[^>]*>([^<]*)<\/span>/i);
-      const ytbMatch = innerHtml.match(/class="[^"]*y-t-b[^"]*"[^>]*>([^<]*)<\/span>/i);
-      const clockMatch = innerHtml.match(/class="[^"]*yt-clock[^"]*"[^>]*>([^<]*)<\/span>/i);
+      const ytaMatch = innerHtml.match(/class="[^"]*y-t-a[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+      const ytbMatch = innerHtml.match(/class="[^"]*y-t-b[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
+      const clockMatch = innerHtml.match(/class="[^"]*yt-clock[^"]*"[^>]*>([\s\S]*?)<\/span>/i);
 
-      const rawTitle = ytaMatch ? ytaMatch[1].trim() : "";
-      const epText = ytbMatch ? ytbMatch[1].trim() : "";
-      const duration = clockMatch ? clockMatch[1].trim() : "";
+      const rawTitle = ytaMatch ? ytaMatch[1].replace(/<[^>]*>/g, '').trim() : "";
+      const epText = ytbMatch ? ytbMatch[1].replace(/<[^>]*>/g, '').trim() : "";
+      const duration = clockMatch ? clockMatch[1].replace(/<[^>]*>/g, '').trim() : "";
+
 
       let cleanTitle = rawTitle;
       let subDubType = "DUB";
