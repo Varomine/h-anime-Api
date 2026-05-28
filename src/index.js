@@ -85,6 +85,64 @@ export default {
         });
       }
 
+      if (path === '/api/filters') {
+        const options = await parseFilterOptions();
+        return new Response(JSON.stringify(options), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      if (path === '/api/filter') {
+        const genres = url.searchParams.getAll('genres');
+        const years = url.searchParams.getAll('years');
+        const status = url.searchParams.getAll('status');
+        const sort = url.searchParams.get('sort') || 'latest';
+        const page = parseInt(url.searchParams.get('page') || '1', 10);
+
+        const cleanParam = (paramArray) => {
+          const cleaned = [];
+          for (const val of paramArray) {
+            if (val.includes(',')) {
+              cleaned.push(...val.split(',').map(s => s.trim()).filter(Boolean));
+            } else if (val.trim()) {
+              cleaned.push(val.trim());
+            }
+          }
+          return cleaned;
+        };
+
+        const categoryList = cleanParam(genres);
+        const yearsList = cleanParam(years);
+        const airList = cleanParam(status);
+
+        const queryParts = [];
+        queryParts.push(`q=${encodeURIComponent('')}`);
+        queryParts.push(`sort=${encodeURIComponent(sort)}`);
+
+        for (const cat of categoryList) {
+          queryParts.push(`category%5B%5D=${encodeURIComponent(cat)}`);
+        }
+        for (const yr of yearsList) {
+          queryParts.push(`years%5B%5D=${encodeURIComponent(yr)}`);
+        }
+        for (const st of airList) {
+          queryParts.push(`air%5B%5D=${encodeURIComponent(st)}`);
+        }
+        if (page > 1) {
+          queryParts.push(`pages=${page}`);
+        }
+        const queryStr = queryParts.join('&');
+
+        const filterUrl = `https://www.alpha-hen.com/filter/?${queryStr}`;
+
+
+        const { series, totalPages } = await parsePage(filterUrl);
+        return new Response(JSON.stringify({ currentPage: page, totalPages, results: series }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+
       // HLS Playlist Proxy (Smart Master and Quality Playlist router)
       if (path === '/proxy/master.m3u8') {
         const targetUrl = url.searchParams.get('url') || '';
@@ -250,12 +308,13 @@ async function parsePage(pageUrl) {
 
   // Parse total pages
   let totalPages = 1;
-  const pageRegex = /\/page\/(\d+)\/?/g;
+  const pageRegex = /\/page\/(\d+)\/?|[?&]pages?=(\d+)/g;
   let pageMatch;
   while ((pageMatch = pageRegex.exec(html)) !== null) {
-    const p = parseInt(pageMatch[1], 10);
+    const p = parseInt(pageMatch[1] || pageMatch[2], 10);
     if (p > totalPages) totalPages = p;
   }
+
 
   return { series, totalPages };
 }
@@ -403,6 +462,131 @@ async function resolveStreamLinks(episodeUrl) {
   return qualities;
 }
 
+let cachedFilters = null;
+
+async function parseFilterOptions() {
+  if (cachedFilters) {
+    return cachedFilters;
+  }
+
+  const fallback = {
+    genres: [
+      "Hentai เฮ็นไต", "Big Breasts หน้าอกใหญ่", "Blow Job การอม", "Censored เซ็นเซอร์",
+      "Creampie การหลั่งใน", "Paizuri ใช้ร่องนม", "Student นักเรียน", "School Girl นักเรียนหญิง",
+      "Cunnilingus ใช้ปาก", "Virginity เปิดซิง", "Hand Job ใช้มือช่วย", "Group กลุ่ม",
+      "Anal ประตูหลัง", "Rape ข่มขืน", "Ahegao สีหน้าฟิน", "Masturbation การช่วยตัวเอง",
+      "Stockings ถุงน่อง", "Forced ฝืนใจ", "Gangbang การข่มขืนหมู่", "Doujin โดจิน",
+      "Bondage มัดด้วยเชือก", "Harem ฮาเร็ม", "Double Penetration หน้าหลังพร้อมกัน",
+      "Incest ญาติ", "Yuri หญิง หญิง", "Doggy Style ท่าหมา", "Small Breasts หน้าอกเล็ก",
+      "Dildo ดิลโด้", "Uncensored อันเซ็นเซอร์", "Teacher ครู", "House Wife แม่บ้าน",
+      "Netorare/NTR ถูกแย่งแฟน", "Romance โรแมนติก", "Lolicon โลลิคอน", "Dark Skin ผิวเข้ม",
+      "Swimsuit ชุดว่ายน้ำ", "BDSM ซาดิส", "Maid สาวใช้", "Filming ถ่ายหนัง", "Glasses แว่น",
+      "Sex Toys ของเล่นผู้ใหญ่", "Lactation การหลั่งน้ำนม", "Foot Job ใช้เท้าช่วย",
+      "Cheating นอกใจ", "Milf สาวรุ่นใหญ่", "Humiliation ความน่าอาย", "Tentacles หนวด",
+      "Cosplay คอสเพลย์", "Garter belt เข็มขัดแขวนถุงน่อง", "Bath อาบน้ำ", "Fantasy แฟนตาซี",
+      "Blindfold ผ้าปิดตา", "Triple Penetration โดน 3 ทางพร้อมกัน",
+      "Shibari ใช้เชือกและแขวนคนให้ลอย", "Blackmail แบล็กเมล์", "Demons ปีศาจ",
+      "Futanari เป็นผู้หญิงที่มีทั้ง 2 เพศ", "Femdom ผู้หญิงที่เป็นฝ่ายเหนือ", "Apron ผ้ากันเปื้อน",
+      "Unusual Pupils ม่านตาเป็นรูปหัวใจ", "Rimjob เลียประตูหลัง", "Domination ครอบงำ",
+      "Tsundere สึนเดเระ", "Bloomers ชุดกีฬาผู้หญิง", "Shota โชตะ", "Spanking การตี",
+      "Pregnant ตั้งท้อง", "Bikini บิกีนี", "Huge Breasts หน้าอกใหญ่มาก", "Tan lines รอยเกรียมของผิว",
+      "Chikan ลวนลามบนรถไฟ", "Exhibitionism ที่สาธารณะ", "Inflation ท้องป่อง",
+      "School โรงเรียน", "Mind Break ใจสลาย", "Mind Control สะกดจิต", "Nurse พยาบาล",
+      "Urination ฉี่", "Collar ปลอกคอ", "Big Ass ก้นใหญ่", "Gigantic Breasts หน้าอกใหญ่มหึมา",
+      "Dilf ผู้ชายวัยทำงาน", "Fingering การใช้นิ้วมือ", "Sleeping ลักหลับ",
+      "Supernatural เหนือธรรมชาติ", "Succubus ซักคิวบัส", "Bukkake ราดหน้า", "Gal สาวแกล",
+      "Gag ปิดปาก", "Comedy ตลก", "Mother แม่", "BBM ชายร่างใหญ่", "Elf เอลฟ์",
+      "Idol ไอดอล", "Bunny Girl สาวหูกระต่าย", "Monster Girl สาวมอนสเตอร์", "Prostitution ขายตัว",
+      "Facesitting นั่งทับหน้า", "Body Writing เขียนตามร่างกาย", "Condom ถุงยาง",
+      "Cheerleader เชียร์ลีดเดอร์", "Pantyhose ถุงน่องคลุม กกน.", "Bodysuit ชุดรัดรูป",
+      "Impregnation ทำให้ท้อง", "Magical Girl สาวน้อยเวทมนต์", "Drama ดราม่า",
+      "Office ออฟฟิศ", "Action แอคชั่น", "Tail plug หางเสียบประตูหลัง", "Monster มอนสเตอร์",
+      "Nipple Fuck การอี๊บที่หัวนม", "BBW สาวร่างใหญ่", "Tomboy ทอม",
+      "Crossdressing พวกที่แต่งตัวเป็นอีกเพศนึง", "Sisters พี่สาว น้องสาว", "Horror สยองขวัญ",
+      "Waitress สาวเสิร์ฟ", "Deep Throat อมสุดคอหอย", "Sport กีฬา", "Sweating เหงื่อ",
+      "Miko หญิงรับใช้ศาลเจ้า", "Large Insertions การสอดใส่ของขนาดใหญ่", "Fisting การใช้มือยัด",
+      "Yaoi ชาย ชาย", "Gokkun กลืนน้ำกาม", "3D สามมิติ", "Big Nipples หัวนมใหญ่",
+      "Cat Girl สาวหูแมว", "Nose Hook เกี่ยวจมูกเหมือนหมู", "Game เกม",
+      "Breast Expansion การขยายเต้านม", "Adventure ผจญภัย", "Drugs ใช้ยา", "Slave ทาส",
+      "Ponytail ผมหางม้า", "Double Vaginal ประตูหน้า 2 อันพร้อมกัน", "Twintails ทวินเทล",
+      "Hair Job ใช้ผม", "Gothic lolita โกธิค โลลิต้า", "Angel นางฟ้า", "Human Pet สัตว์เลี้ยง",
+      "Kissing การจูบ", "Mystery ความลึกลับ", "Birth การคลอด", "Milking การรีดนม",
+      "Piercing เจาะร่างกาย", "Gender Bender แนวเปลี่ยนเพศ", "Twins ฝาแฝด",
+      "Schoolgirl Uniform ชุดนักเรียนหญิง", "Inseki ญาติสมรส", "Drunk เมา", "House บ้าน",
+      "Ghost ผี", "Martial Arts ศิลปะการต่อสู้", "Transformation การเปลี่ยนร่าง",
+      "Armpit Sex รักแร้", "Tiara รัดเกล้า", "Tall Girl ผู้หญิงตัวสูง", "Vampires แวมไพร์",
+      "Urethra Insertion การสอดใส่ท่อปัสสาวะ", "Super Power พลังพิเศษ",
+      "Latex ชุดยางรัดรูป", "Hairy ขน", "Snuff เนื้อเรื่องโหดร้ายมาก",
+      "School Swimsuit ชุดว่ายน้ำของโรงเรียน", "Bestiality สมสู่กับสัตว์", "Wings ปีก",
+      "Family ครอบครัว", "Widow แม่หม้าย", "Sci-Fi ไซไฟ", "Kimono กิโมโน",
+      "Historical ประวัติศาสตร์", "Kunoichi นินจาหญิง", "Daughter ลูกสาว",
+      "Thigh High Boots รองเท้าบูทยาว ส้นสูง", "Mature เป็นผู้ใหญ่", "Leotard ชุดแนบเนื้อ",
+      "Double Anal ประตูหลัง 2 อันพร้อมกัน", "Horns เขา", "Prison คุก", "Oni โอนิ",
+      "Guro ระทึกขวัญ", "Corset ชุดคอร์เซ็ท", "FFM Threesome หญิง หญิง ชาย",
+      "Mecha หุ่นยนต์", "Public Use ของใช้สาธารณะ", "Witch แม่มด",
+      "Shimapan กางเกงในลายทาง", "Hot Pants กางเกงขาสั้น", "Doctor หมอ",
+      "Hairy Armpits ขนรักแร้", "Giantess คนที่มีขนาดยักษ์", "Males Only ผู้ชายเท่านั้น",
+      "Lingerie ชุดชั้นใน", "Eyepatch ผ้าปิดตาข้างเดียว", "Vaginal Sticker พลาสเตอร์ปิดโยนี",
+      "Business suit ชุดทำงาน", "Emotionless Sex หน้าตายไร้อารมณ์"
+    ],
+    years: [
+      "2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017",
+      "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007",
+      "2006", "2005", "2004", "2003", "2002", "2001", "2000", "1999", "1998", "1997"
+    ],
+    status: ["จบแล้ว", "ยังไม่จบ"]
+  };
+
+  try {
+    const res = await fetch("https://www.alpha-hen.com/filter/", { headers: HEADERS });
+    if (!res.ok) {
+      cachedFilters = fallback;
+      return fallback;
+    }
+    const html = await res.text();
+
+    const genres = [];
+    const years = [];
+    const status = [];
+
+    const inputRegex = /<input([^>]+)>/g;
+    let match;
+    while ((match = inputRegex.exec(html)) !== null) {
+      const attrs = match[1];
+      const nameMatch = attrs.match(/name=["']([^"']+)["']/);
+      const valueMatch = attrs.match(/value=["']([^"']+)["']/);
+      if (nameMatch && valueMatch) {
+        const name = nameMatch[1];
+        const value = valueMatch[1];
+        const decodedValue = value.replace(/&amp;/g, '&')
+                                  .replace(/&quot;/g, '"')
+                                  .replace(/&#039;/g, "'")
+                                  .replace(/&lt;/g, '<')
+                                  .replace(/&gt;/g, '>');
+        if (name === 'category[]') {
+          genres.push(decodedValue);
+        } else if (name === 'years[]') {
+          years.push(decodedValue);
+        } else if (name === 'air[]') {
+          status.push(decodedValue);
+        }
+      }
+    }
+
+    const result = {
+      genres: genres.length > 0 ? genres : fallback.genres,
+      years: years.length > 0 ? years : fallback.years,
+      status: status.length > 0 ? status : fallback.status
+    };
+    cachedFilters = result;
+    return result;
+  } catch (e) {
+    cachedFilters = fallback;
+    return fallback;
+  }
+}
+
 function getIndexHtml() {
   return htmlContent;
 }
+

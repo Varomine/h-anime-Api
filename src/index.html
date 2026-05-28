@@ -114,6 +114,88 @@
             box-shadow: 0 5px 15px rgba(255, 46, 147, 0.4);
         }
 
+        .filters-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            background: rgba(255,255,255,0.02);
+            transition: all 0.2s;
+            margin-top: 5px;
+        }
+        .filters-toggle:hover, .filters-toggle.active {
+            color: var(--accent-pink);
+            border-color: var(--accent-pink);
+            background: rgba(255, 46, 147, 0.05);
+        }
+        .filters-panel {
+            display: none;
+            flex-wrap: wrap;
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease-out;
+            z-index: 10;
+        }
+        .filters-panel.active {
+            display: flex;
+        }
+        .filter-group {
+            flex: 1 1 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .filter-group select {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            padding: 10px;
+            outline: none;
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .filter-group select:focus {
+            border-color: var(--accent-pink);
+        }
+        .filter-group select option {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        .filter-actions {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+
         /* Tabs Navigation */
         .tabs-nav {
             display: flex;
@@ -667,6 +749,37 @@
             <input type="text" class="search-input" placeholder="Search Hentai / H-Anime..." id="searchInput">
             <button class="search-btn" onclick="performSearch()">Search</button>
         </div>
+
+        <!-- Collapsible Advanced Filters -->
+        <div class="filters-toggle" id="filtersToggle" onclick="toggleFiltersPanel()">
+            <svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+            <span>Advanced Filters</span>
+        </div>
+        <div class="filters-panel" id="filtersPanel">
+            <div class="filter-group">
+                <label>Genre</label>
+                <select id="filterGenre">
+                    <option value="">All Genres</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Year</label>
+                <select id="filterYear">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select id="filterStatus">
+                    <option value="">All Statuses</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button class="search-btn" style="padding: 8px 20px;" onclick="applyFilters()">Apply</button>
+                <button class="search-btn" style="padding: 8px 20px; background:transparent; border:1px solid var(--border-color);" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
     </header>
 
     <main>
@@ -922,12 +1035,127 @@
     }
   }
 }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Endpoint -->
+            <div class="doc-card">
+                <div class="doc-endpoint">
+                    <span class="method-badge get">GET</span>
+                    <span class="endpoint-path">/api/filters</span>
+                </div>
+                <div class="doc-desc">Fetch the list of available genres (categories), release years, and airing statuses.</div>
+                
+                <div class="doc-card-body">
+                    <div class="doc-left">
+                        <div class="params-title">Query Parameters</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem; padding: 10px 0;">None required.</div>
+                    </div>
+                    <div class="doc-right">
+                        <div class="ex-header">Example Response</div>
+                        <div class="code-block">
+{
+  <span class="json-key">"genres"</span>: [
+    <span class="json-string">"Hentai เฮ็นไต"</span>,
+    <span class="json-string">"Big Breasts หน้าอกใหญ่"</span>
+  ],
+  <span class="json-key">"years"</span>: [
+    <span class="json-string">"2026"</span>,
+    <span class="json-string">"2025"</span>
+  ],
+  <span class="json-key">"status"</span>: [
+    <span class="json-string">"จบแล้ว"</span>,
+    <span class="json-string">"ยังไม่จบ"</span>
+  ]
+}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Endpoint -->
+            <div class="doc-card">
+                <div class="doc-endpoint">
+                    <span class="method-badge get">GET</span>
+                    <span class="endpoint-path">/api/filter</span>
+                </div>
+                <div class="doc-desc">Filter series by genres, release years, airing status, and sort options (supports pagination).</div>
+                
+                <div class="doc-card-body">
+                    <div class="doc-left">
+                        <div class="params-title">Query Parameters</div>
+                        <table class="params-table">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Type</th>
+                                    <th>Required</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="param-name">genres</td>
+                                    <td class="param-type">string / array</td>
+                                    <td>No</td>
+                                    <td>Filter by genre(s). Can be multiple parameters or a single comma-separated list.</td>
+                                </tr>
+                                <tr>
+                                    <td class="param-name">years</td>
+                                    <td class="param-type">string / array</td>
+                                    <td>No</td>
+                                    <td>Filter by release year(s). Can be multiple parameters or comma-separated.</td>
+                                </tr>
+                                <tr>
+                                    <td class="param-name">status</td>
+                                    <td class="param-type">string / array</td>
+                                    <td>No</td>
+                                    <td>Filter by airing status ('จบแล้ว' or 'ยังไม่จบ').</td>
+                                </tr>
+                                <tr>
+                                    <td class="param-name">sort</td>
+                                    <td class="param-type">string</td>
+                                    <td>No (default: latest)</td>
+                                    <td>Sorting order. E.g., 'latest'</td>
+                                </tr>
+                                <tr>
+                                    <td class="param-name">page</td>
+                                    <td class="param-type">integer</td>
+                                    <td>No (default: 1)</td>
+                                    <td>The page number offset to load.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="doc-right">
+                        <div class="ex-header">Example Response</div>
+                        <div class="code-block">
+{
+  <span class="json-key">"currentPage"</span>: 1,
+  <span class="json-key">"totalPages"</span>: 12,
+  <span class="json-key">"results"</span>: [
+    {
+      <span class="json-key">"title"</span>: <span class="json-string">"Ookii Onnanoko wa Suki desu ka?"</span>,
+      <span class="json-key">"url"</span>: <span class="json-string">"https://www.alpha-hen.com/ookii-onnanoko-wa-suki-desu-ka/"</span>,
+      <span class="json-key">"thumbnail"</span>: <span class="json-string">"https://www.alpha-hen.com/wp-content/uploads/2026/04/325424.jpg"</span>,
+      <span class="json-key">"score"</span>: <span class="json-string">"6.45"</span>,
+      <span class="json-key">"tag"</span>: <span class="json-string">"Hentai"</span>,
+      <span class="json-key">"episodes"</span>: <span class="json-string">"8/12"</span>,
+      <span class="json-key">"status"</span>: <span class="json-string">"ยังไม่จบ"</span>,
+      <span class="json-key">"language"</span>: <span class="json-string">"ซับไทย"</span>
+    }
+  ]
+}
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- HLS Stream Proxy -->
+
             <div class="doc-card">
                 <div class="doc-endpoint">
                     <span class="method-badge get">GET</span>
@@ -981,6 +1209,9 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
         let totalPages = 1;
         let currentView = 'latest';
         let searchQuery = '';
+        let filterGenre = '';
+        let filterYear = '';
+        let filterStatus = '';
         let activePlayer = null;
         let hlsInstance = null;
 
@@ -991,6 +1222,8 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
             const contentPlayer = document.getElementById('playerTabContent');
             const contentDocs = document.getElementById('docsTabContent');
             const searchBox = document.getElementById('headerSearchBox');
+            const filtersToggle = document.getElementById('filtersToggle');
+            const filtersPanel = document.getElementById('filtersPanel');
 
             if (tab === 'player') {
                 btnPlayer.classList.add('active');
@@ -998,18 +1231,23 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
                 contentPlayer.style.display = 'block';
                 contentDocs.style.display = 'none';
                 searchBox.style.display = 'flex';
+                filtersToggle.style.display = 'flex';
             } else {
                 btnPlayer.classList.remove('active');
                 btnDocs.classList.add('active');
                 contentPlayer.style.display = 'none';
                 contentDocs.style.display = 'block';
                 searchBox.style.display = 'none';
+                filtersToggle.style.display = 'none';
+                filtersPanel.classList.remove('active');
+                filtersToggle.classList.remove('active');
             }
         }
 
         // Load initial content
         document.addEventListener('DOMContentLoaded', () => {
             loadPage(1);
+            loadFilters();
             
             document.getElementById('searchInput').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
@@ -1029,7 +1267,14 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
             
             try {
                 let url = '';
-                if (currentView === 'search' && searchQuery) {
+                if (currentView === 'filter') {
+                    const params = [];
+                    if (filterGenre) params.push(`genres=${encodeURIComponent(filterGenre)}`);
+                    if (filterYear) params.push(`years=${encodeURIComponent(filterYear)}`);
+                    if (filterStatus) params.push(`status=${encodeURIComponent(filterStatus)}`);
+                    params.push(`page=${page}`);
+                    url = `/api/filter?${params.join('&')}`;
+                } else if (currentView === 'search' && searchQuery) {
                     url = `/api/search?q=${encodeURIComponent(searchQuery)}&page=${page}`;
                 } else {
                     currentView = 'latest';
@@ -1043,7 +1288,13 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
                 renderGrid(data.results);
                 updatePagination();
                 
-                if (currentView === 'search') {
+                if (currentView === 'filter') {
+                    const activeFilters = [];
+                    if (filterGenre) activeFilters.push(`Genre: ${filterGenre}`);
+                    if (filterYear) activeFilters.push(`Year: ${filterYear}`);
+                    if (filterStatus) activeFilters.push(`Status: ${filterStatus}`);
+                    document.getElementById('gridTitle').textContent = `Filtered H-Anime - ${activeFilters.join(', ')} (Page ${page})`;
+                } else if (currentView === 'search') {
                     document.getElementById('gridTitle').textContent = `Search Results for: "${searchQuery}" (Page ${page})`;
                 } else {
                     document.getElementById('gridTitle').textContent = `Browse H-Anime (Page ${page})`;
@@ -1058,6 +1309,15 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
 
         async function performSearch() {
             const query = document.getElementById('searchInput').value.trim();
+            
+            // Reset filters
+            document.getElementById('filterGenre').value = '';
+            document.getElementById('filterYear').value = '';
+            document.getElementById('filterStatus').value = '';
+            filterGenre = '';
+            filterYear = '';
+            filterStatus = '';
+
             if (!query) {
                 currentView = 'latest';
                 searchQuery = '';
@@ -1067,6 +1327,87 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
             
             currentView = 'search';
             searchQuery = query;
+            loadPage(1);
+        }
+
+        async function loadFilters() {
+            try {
+                const response = await fetch('/api/filters');
+                const data = await response.json();
+                
+                const selectGenre = document.getElementById('filterGenre');
+                const selectYear = document.getElementById('filterYear');
+                const selectStatus = document.getElementById('filterStatus');
+                
+                if (data.genres) {
+                    data.genres.forEach(g => {
+                        const opt = document.createElement('option');
+                        opt.value = g;
+                        opt.textContent = g;
+                        selectGenre.appendChild(opt);
+                    });
+                }
+                if (data.years) {
+                    data.years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y;
+                        opt.textContent = y;
+                        selectYear.appendChild(opt);
+                    });
+                }
+                if (data.status) {
+                    data.status.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s;
+                        opt.textContent = s;
+                        selectStatus.appendChild(opt);
+                    });
+                }
+            } catch (error) {
+                console.error("Error loading filters:", error);
+            }
+        }
+
+        function toggleFiltersPanel() {
+            const panel = document.getElementById('filtersPanel');
+            const toggle = document.getElementById('filtersToggle');
+            if (panel.classList.contains('active')) {
+                panel.classList.remove('active');
+                toggle.classList.remove('active');
+            } else {
+                panel.classList.add('active');
+                toggle.classList.add('active');
+            }
+        }
+
+        function applyFilters() {
+            filterGenre = document.getElementById('filterGenre').value;
+            filterYear = document.getElementById('filterYear').value;
+            filterStatus = document.getElementById('filterStatus').value;
+            
+            if (!filterGenre && !filterYear && !filterStatus) {
+                currentView = 'latest';
+                loadPage(1);
+                return;
+            }
+            
+            document.getElementById('searchInput').value = '';
+            searchQuery = '';
+            
+            currentView = 'filter';
+            loadPage(1);
+        }
+
+        function clearFilters() {
+            document.getElementById('filterGenre').value = '';
+            document.getElementById('filterYear').value = '';
+            document.getElementById('filterStatus').value = '';
+            
+            filterGenre = '';
+            filterYear = '';
+            filterStatus = '';
+            
+            currentView = 'latest';
             loadPage(1);
         }
 
