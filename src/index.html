@@ -735,6 +735,122 @@
             .logo { font-size: 2rem; }
             .grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
         }
+
+        /* Schedule styling */
+        .month-section {
+            margin-bottom: 50px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .month-header {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+        .month-badge {
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        .month-badge.past {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .month-badge.upcoming {
+            background: rgba(0, 255, 170, 0.1);
+            color: var(--accent-green);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 170, 0.1);
+        }
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .schedule-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .schedule-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-pink);
+            box-shadow: 0 5px 15px rgba(255, 46, 147, 0.1);
+        }
+        .schedule-card-img-container {
+            position: relative;
+            width: 100%;
+            padding-top: 140%; /* 5:7 Aspect Ratio */
+            background: #111;
+        }
+        .schedule-card-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .schedule-card-ep {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--accent-pink);
+            color: #fff;
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .schedule-card-release {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            color: var(--text-primary);
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+        .schedule-card-content {
+            padding: 12px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .schedule-card-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.3;
+        }
     </style>
 </head>
 <body>
@@ -742,6 +858,7 @@
         <div class="logo">ALPHA-HEN STREAM & API</div>
         <div class="tabs-nav">
             <button class="tab-btn active" id="btnPlayerTab" onclick="switchTab('player')">Stream Player</button>
+            <button class="tab-btn" id="btnScheduleTab" onclick="switchTab('schedule')">Anime Schedule</button>
             <button class="tab-btn" id="btnDocsTab" onclick="switchTab('docs')">API Documentation</button>
         </div>
         
@@ -834,6 +951,17 @@
             </section>
         </div>
 
+        <!-- ================= SCHEDULE TAB CONTENT ================= -->
+        <div id="scheduleTabContent" style="display: none; animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
+            <section>
+                <div class="section-title">Anime Release Schedule</div>
+                <div class="loader" id="scheduleLoader">
+                    <div class="spinner"></div>
+                </div>
+                <div id="scheduleContainer"></div>
+            </section>
+        </div>
+
         <!-- ================= API DOCS TAB CONTENT ================= -->
         <div id="docsTabContent" class="docs-container">
             <div class="section-title">Developer Reference</div>
@@ -898,7 +1026,7 @@
                     <span class="method-badge get">GET</span>
                     <span class="endpoint-path">/api/search</span>
                 </div>
-                <div class="doc-desc">Scrapes the live search results from the website (supports pagination).</div>
+                <div class="doc-desc">Scrapes the live search results from the website. **Supports combining search keyword with advanced filters** (genres, years, status, sort).</div>
                 
                 <div class="doc-card-body">
                     <div class="doc-left">
@@ -916,8 +1044,32 @@
                                 <tr>
                                     <td class="param-name">q</td>
                                     <td class="param-type">string</td>
-                                    <td>Yes</td>
-                                    <td>Search query keyword</td>
+                                    <td>No</td>
+                                    <td>Search query keyword (optional if other filters are present)</td>
+                                </tr>
+                                <tr>
+                                    <td class="param-name">genres</td>
+                                    <td class="param-type">string / array</td>
+                                    <td>No</td>
+                                    <td>Filter by genre(s). Can be multiple parameters or comma-separated.</td>
+                                </tr>
+                                <tr>
+                                    <td class="param-name">years</td>
+                                    <td class="param-type">string / array</td>
+                                    <td>No</td>
+                                    <td>Filter by year(s). Can be multiple parameters or comma-separated.</td>
+                                </tr>
+                                <tr>
+                                    <td class="param-name">status</td>
+                                    <td class="param-type">string / array</td>
+                                    <td>No</td>
+                                    <td>Filter by airing status ('จบแล้ว' or 'ยังไม่จบ').</td>
+                                </tr>
+                                <tr>
+                                    <td class="param-name">sort</td>
+                                    <td class="param-type">string</td>
+                                    <td>No (default: latest)</td>
+                                    <td>Sorting order. Values: 'latest' or 'title'.</td>
                                 </tr>
                                 <tr>
                                     <td class="param-name">page</td>
@@ -929,7 +1081,8 @@
                         </table>
                     </div>
                     <div class="doc-right">
-                        <div class="ex-header">Example Response</div>
+                        <div class="ex-header">Example Request & Response</div>
+                        <p style="margin-bottom: 10px; font-size: 0.9rem; font-family: var(--font-code); color: var(--accent-pink); word-break: break-all;">/api/search?q=Suki&genres=Uncensored อันเซ็นเซอร์</p>
                         <div class="code-block">
 {
   <span class="json-key">"currentPage"</span>: 1,
@@ -937,8 +1090,8 @@
   <span class="json-key">"results"</span>: [
     {
       <span class="json-key">"title"</span>: <span class="json-string">"Ookii Onnanoko wa Suki desu ka?"</span>,
-      <span class="json-key">"url"</span>: <span class="json-string">"https://www.alpha-hen.com/ookii-onnanoko-wa-suki-desu-ka/"</span>,
-      <span class="json-key">"thumbnail"</span>: <span class="json-string">"https://www.alpha-hen.com/wp-content/uploads/2026/04/325424.jpg"</span>,
+      <span class="json-key">"url"</span>: <span class="json-string">"https://www.alpha-hen.com/ookii-onnanoko..."</span>,
+      <span class="json-key">"thumbnail"</span>: <span class="json-string">"https://www.alpha-hen.com/wp-content..."</span>,
       <span class="json-key">"score"</span>: <span class="json-string">"6.45"</span>,
       <span class="json-key">"tag"</span>: <span class="json-string">"Hentai"</span>,
       <span class="json-key">"episodes"</span>: <span class="json-string">"8/12"</span>,
@@ -947,6 +1100,42 @@
     }
   ]
 }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule Endpoint -->
+            <div class="doc-card">
+                <div class="doc-endpoint">
+                    <span class="method-badge get">GET</span>
+                    <span class="endpoint-path">/api/schedule</span>
+                </div>
+                <div class="doc-desc">Fetch the upcoming anime release schedule grouped by month directly from the site.</div>
+                
+                <div class="doc-card-body">
+                    <div class="doc-left">
+                        <div class="params-title">Query Parameters</div>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">None</p>
+                    </div>
+                    <div class="doc-right">
+                        <div class="ex-header">Example Response</div>
+                        <div class="code-block">
+[
+  {
+    <span class="json-key">"month"</span>: <span class="json-string">"มกราคม"</span>,
+    <span class="json-key">"isPast"</span>: <span class="json-boolean">true</span>,
+    <span class="json-key">"results"</span>: [
+      {
+        <span class="json-key">"title"</span>: <span class="json-string">"Imaizumin Chi wa Douyara Gal..."</span>,
+        <span class="json-key">"url"</span>: <span class="json-string">"https://www.alpha-hen.com/imaizumin..."</span>,
+        <span class="json-key">"thumbnail"</span>: <span class="json-string">"https://www.alpha-hen.com/wp-content..."</span>,
+        <span class="json-key">"episode"</span>: <span class="json-string">"EP 05"</span>,
+        <span class="json-key">"releaseDate"</span>: <span class="json-string">"ศ. 30/01/2026"</span>
+      }
+    ]
+  }
+]
                         </div>
                     </div>
                 </div>
@@ -1230,29 +1419,43 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
         // Switch dashboard tabs
         function switchTab(tab) {
             const btnPlayer = document.getElementById('btnPlayerTab');
+            const btnSchedule = document.getElementById('btnScheduleTab');
             const btnDocs = document.getElementById('btnDocsTab');
+            
             const contentPlayer = document.getElementById('playerTabContent');
+            const contentSchedule = document.getElementById('scheduleTabContent');
             const contentDocs = document.getElementById('docsTabContent');
+            
             const searchBox = document.getElementById('headerSearchBox');
             const filtersToggle = document.getElementById('filtersToggle');
             const filtersPanel = document.getElementById('filtersPanel');
 
+            // Reset active states
+            btnPlayer.classList.remove('active');
+            if (btnSchedule) btnSchedule.classList.remove('active');
+            btnDocs.classList.remove('active');
+            
+            contentPlayer.style.display = 'none';
+            if (contentSchedule) contentSchedule.style.display = 'none';
+            contentDocs.style.display = 'none';
+            
+            searchBox.style.display = 'none';
+            filtersToggle.style.display = 'none';
+            filtersPanel.classList.remove('active');
+            filtersToggle.classList.remove('active');
+
             if (tab === 'player') {
                 btnPlayer.classList.add('active');
-                btnDocs.classList.remove('active');
                 contentPlayer.style.display = 'block';
-                contentDocs.style.display = 'none';
                 searchBox.style.display = 'flex';
                 filtersToggle.style.display = 'flex';
+            } else if (tab === 'schedule') {
+                if (btnSchedule) btnSchedule.classList.add('active');
+                if (contentSchedule) contentSchedule.style.display = 'block';
+                loadSchedule();
             } else {
-                btnPlayer.classList.remove('active');
                 btnDocs.classList.add('active');
-                contentPlayer.style.display = 'none';
                 contentDocs.style.display = 'block';
-                searchBox.style.display = 'none';
-                filtersToggle.style.display = 'none';
-                filtersPanel.classList.remove('active');
-                filtersToggle.classList.remove('active');
             }
         }
 
@@ -1279,16 +1482,24 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
             
             try {
                 let url = '';
-                if (currentView === 'filter') {
+                const q = document.getElementById('searchInput').value.trim();
+                
+                filterGenre = document.getElementById('filterGenre').value;
+                filterYear = document.getElementById('filterYear').value;
+                filterStatus = document.getElementById('filterStatus').value;
+                filterSort = document.getElementById('filterSort').value;
+                
+                if (filterGenre || filterYear || filterStatus || filterSort !== 'latest' || q) {
                     const params = [];
+                    if (q) params.push(`q=${encodeURIComponent(q)}`);
                     if (filterGenre) params.push(`genres=${encodeURIComponent(filterGenre)}`);
                     if (filterYear) params.push(`years=${encodeURIComponent(filterYear)}`);
                     if (filterStatus) params.push(`status=${encodeURIComponent(filterStatus)}`);
                     if (filterSort) params.push(`sort=${encodeURIComponent(filterSort)}`);
                     params.push(`page=${page}`);
-                    url = `/api/filter?${params.join('&')}`;
-                } else if (currentView === 'search' && searchQuery) {
-                    url = `/api/search?q=${encodeURIComponent(searchQuery)}&page=${page}`;
+                    
+                    url = `/api/search?${params.join('&')}`;
+                    currentView = 'search';
                 } else {
                     currentView = 'latest';
                     url = `/api/latest?page=${page}`;
@@ -1301,15 +1512,14 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
                 renderGrid(data.results);
                 updatePagination();
                 
-                if (currentView === 'filter') {
+                if (currentView === 'search') {
                     const activeFilters = [];
+                    if (q) activeFilters.push(`Keyword: "${q}"`);
                     if (filterGenre) activeFilters.push(`Genre: ${filterGenre}`);
                     if (filterYear) activeFilters.push(`Year: ${filterYear}`);
                     if (filterStatus) activeFilters.push(`Status: ${filterStatus}`);
                     if (filterSort && filterSort !== 'latest') activeFilters.push(`Sort: ${filterSort === 'title' ? 'Alphabetical' : filterSort}`);
-                    document.getElementById('gridTitle').textContent = `Filtered H-Anime - ${activeFilters.join(', ')} (Page ${page})`;
-                } else if (currentView === 'search') {
-                    document.getElementById('gridTitle').textContent = `Search Results for: "${searchQuery}" (Page ${page})`;
+                    document.getElementById('gridTitle').textContent = `Search & Filter Results - ${activeFilters.join(', ')} (Page ${page})`;
                 } else {
                     document.getElementById('gridTitle').textContent = `Browse H-Anime (Page ${page})`;
                 }
@@ -1322,27 +1532,6 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
         }
 
         async function performSearch() {
-            const query = document.getElementById('searchInput').value.trim();
-            
-            // Reset filters
-            document.getElementById('filterGenre').value = '';
-            document.getElementById('filterYear').value = '';
-            document.getElementById('filterStatus').value = '';
-            document.getElementById('filterSort').value = 'latest';
-            filterGenre = '';
-            filterYear = '';
-            filterStatus = '';
-            filterSort = 'latest';
-
-            if (!query) {
-                currentView = 'latest';
-                searchQuery = '';
-                loadPage(1);
-                return;
-            }
-            
-            currentView = 'search';
-            searchQuery = query;
             loadPage(1);
         }
 
@@ -1384,6 +1573,80 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
             }
         }
 
+        let scheduleLoaded = false;
+        async function loadSchedule() {
+            const loader = document.getElementById('scheduleLoader');
+            const container = document.getElementById('scheduleContainer');
+            
+            if (scheduleLoaded && container.innerHTML !== '') return;
+            
+            loader.style.display = 'flex';
+            container.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/schedule');
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 50px 0;">No schedule data available.</div>';
+                    return;
+                }
+                
+                data.forEach(monthGroup => {
+                    const monthSec = document.createElement('div');
+                    monthSec.className = 'month-section';
+                    
+                    const badgeText = monthGroup.isPast ? 'PAST MONTH' : 'UPCOMING RELEASE';
+                    const badgeClass = monthGroup.isPast ? 'past' : 'upcoming';
+                    
+                    let cardsHtml = '';
+                    if (monthGroup.results.length === 0) {
+                        cardsHtml = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 20px 0;">No releases scheduled for this month.</div>';
+                    } else {
+                        monthGroup.results.forEach(item => {
+                            let imgHtml = `<div class="card-img-placeholder" style="position: absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">AH</div>`;
+                            if (item.thumbnail) {
+                                imgHtml = `<img src="${item.thumbnail}" class="schedule-card-img" alt="${item.title}" onerror="this.style.display='none';">`;
+                            }
+                            
+                            const clickAction = item.url && item.url !== '#' ? `onclick="showEpisodes('${item.title.replace(/'/g, "\\'")}', '${item.url}')"` : `style="cursor: default;"`;
+                            
+                            cardsHtml += `
+                                <div class="schedule-card" ${clickAction}>
+                                    <div class="schedule-card-img-container">
+                                        ${imgHtml}
+                                        ${item.episode ? `<span class="schedule-card-ep">${item.episode}</span>` : ''}
+                                        ${item.releaseDate ? `<span class="schedule-card-release">${item.releaseDate}</span>` : ''}
+                                    </div>
+                                    <div class="schedule-card-content">
+                                        <div class="schedule-card-title">${item.title}</div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    monthSec.innerHTML = `
+                        <div class="month-header">
+                            <span>${monthGroup.month}</span>
+                            <span class="month-badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                        <div class="schedule-grid">
+                            ${cardsHtml}
+                        </div>
+                    `;
+                    container.appendChild(monthSec);
+                });
+                
+                scheduleLoaded = true;
+            } catch (error) {
+                console.error("Error loading schedule:", error);
+                container.innerHTML = '<div style="text-align: center; color: red; padding: 50px 0;">Failed to load schedule.</div>';
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
         function toggleFiltersPanel() {
             const panel = document.getElementById('filtersPanel');
             const toggle = document.getElementById('filtersToggle');
@@ -1397,21 +1660,7 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
         }
 
         function applyFilters() {
-            filterGenre = document.getElementById('filterGenre').value;
-            filterYear = document.getElementById('filterYear').value;
-            filterStatus = document.getElementById('filterStatus').value;
-            filterSort = document.getElementById('filterSort').value;
-            
-            if (!filterGenre && !filterYear && !filterStatus && filterSort === 'latest') {
-                currentView = 'latest';
-                loadPage(1);
-                return;
-            }
-            
-            document.getElementById('searchInput').value = '';
-            searchQuery = '';
-            
-            currentView = 'filter';
+            toggleFiltersPanel();
             loadPage(1);
         }
 
@@ -1426,7 +1675,6 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
             filterStatus = '';
             filterSort = 'latest';
             
-            currentView = 'latest';
             loadPage(1);
         }
 
@@ -1485,6 +1733,7 @@ https://alpha-hen-worker.hirunyawatra.workers.dev/proxy/master.m3u8?url=https://
         }
 
         async function showEpisodes(seriesTitle, seriesUrl) {
+            switchTab('player');
             document.getElementById('episodesSection').style.display = 'block';
             document.getElementById('episodesTitle').textContent = `Episodes for: ${seriesTitle}`;
             const listContainer = document.getElementById('episodesList');

@@ -39,6 +39,53 @@ export default {
       if (path === '/api/search') {
         const q = url.searchParams.get('q') || '';
         const page = parseInt(url.searchParams.get('page') || '1', 10);
+        const genres = url.searchParams.getAll('genres');
+        const years = url.searchParams.getAll('years');
+        const status = url.searchParams.getAll('status');
+        const sort = url.searchParams.get('sort') || 'latest';
+
+        const cleanParam = (paramArray) => {
+          const cleaned = [];
+          for (const val of paramArray) {
+            if (val.includes(',')) {
+              cleaned.push(...val.split(',').map(s => s.trim()).filter(Boolean));
+            } else if (val.trim()) {
+              cleaned.push(val.trim());
+            }
+          }
+          return cleaned;
+        };
+
+        const categoryList = cleanParam(genres);
+        const yearsList = cleanParam(years);
+        const airList = cleanParam(status);
+
+        if (categoryList.length > 0 || yearsList.length > 0 || airList.length > 0 || sort !== 'latest') {
+          const queryParts = [];
+          queryParts.push(`q=${encodeURIComponent(q)}`);
+          queryParts.push(`sort=${encodeURIComponent(sort)}`);
+
+          for (const cat of categoryList) {
+            queryParts.push(`category%5B%5D=${encodeURIComponent(cat)}`);
+          }
+          for (const yr of yearsList) {
+            queryParts.push(`years%5B%5D=${encodeURIComponent(yr)}`);
+          }
+          for (const st of airList) {
+            queryParts.push(`air%5B%5D=${encodeURIComponent(st)}`);
+          }
+          if (page > 1) {
+            queryParts.push(`pages=${page}`);
+          }
+          const queryStr = queryParts.join('&');
+          const filterUrl = `https://www.alpha-hen.com/filter/?${queryStr}`;
+
+          const { series, totalPages } = await parsePage(filterUrl);
+          return new Response(JSON.stringify({ currentPage: page, totalPages, results: series }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          });
+        }
+
         if (!q) {
           return new Response(JSON.stringify({ currentPage: page, totalPages: 1, results: [] }), {
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -47,6 +94,13 @@ export default {
         const searchUrl = page > 1 ? `https://www.alpha-hen.com/page/${page}/?s=${encodeURIComponent(q)}` : `https://www.alpha-hen.com/?s=${encodeURIComponent(q)}`;
         const { series, totalPages } = await parsePage(searchUrl);
         return new Response(JSON.stringify({ currentPage: page, totalPages, results: series }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      if (path === '/api/schedule') {
+        const schedule = await parseSchedule();
+        return new Response(JSON.stringify(schedule), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
       }
@@ -73,6 +127,15 @@ export default {
             headers: corsHeaders,
           });
         }
+
+        // Cache API integration
+        const cacheKey = new Request(request.url, request);
+        const cache = caches.default;
+        let cachedResponse = await cache.match(cacheKey);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
         const qualities = await resolveStreamLinks(epUrl);
         if (!qualities) {
           return new Response(JSON.stringify({ error: 'Could not resolve stream links' }), {
@@ -80,9 +143,17 @@ export default {
             headers: corsHeaders,
           });
         }
-        return new Response(JSON.stringify({ qualities }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+
+        const res = new Response(JSON.stringify({ qualities }), {
+          headers: { 
+            'Content-Type': 'application/json', 
+            'Cache-Control': 'public, max-age=3600',
+            ...corsHeaders 
+          },
         });
+
+        ctx.waitUntil(cache.put(cacheKey, res.clone()));
+        return res;
       }
 
       if (path === '/api/filters') {
@@ -93,6 +164,7 @@ export default {
       }
 
       if (path === '/api/filter') {
+        const q = url.searchParams.get('q') || '';
         const genres = url.searchParams.getAll('genres');
         const years = url.searchParams.getAll('years');
         const status = url.searchParams.getAll('status');
@@ -116,7 +188,7 @@ export default {
         const airList = cleanParam(status);
 
         const queryParts = [];
-        queryParts.push(`q=${encodeURIComponent('')}`);
+        queryParts.push(`q=${encodeURIComponent(q)}`);
         queryParts.push(`sort=${encodeURIComponent(sort)}`);
 
         for (const cat of categoryList) {
@@ -134,7 +206,6 @@ export default {
         const queryStr = queryParts.join('&');
 
         const filterUrl = `https://www.alpha-hen.com/filter/?${queryStr}`;
-
 
         const { series, totalPages } = await parsePage(filterUrl);
         return new Response(JSON.stringify({ currentPage: page, totalPages, results: series }), {
@@ -417,48 +488,30 @@ async function resolveStreamLinks(episodeUrl) {
   if (!hlsMatch) return null;
   const masterManifestUrl = hlsMatch[1];
 
-  // Step 4: Fetch master manifest (flower.txt) with player page as Referer
   const playerDomain = new URL(redirectUrl).hostname;
   const manifestReferer = `https://${playerDomain}/`;
 
-  const res4 = await fetch(safeQuoteUrl(masterManifestUrl), {
-    headers: { ...HEADERS, Referer: manifestReferer }
-  });
-  const manifestContent = await res4.text();
+  // Optimize: Reconstruct qualities list from base URL without fetching manifest.
+  const lastSlashIndex = masterManifestUrl.lastIndexOf('/');
+  const baseUrl = masterManifestUrl.substring(0, lastSlashIndex + 1);
 
-  // Parse manifest qualities
-  const lines = manifestContent.split('\n');
-  const qualities = {};
-  let currentResolution = '';
-
-  for (let line of lines) {
-    line = line.trim();
-    if (line.startsWith('#EXT-X-STREAM-INF:')) {
-      const resMatch = line.match(/RESOLUTION=(\d+x\d+)/);
-      if (resMatch) currentResolution = resMatch[1];
-    } else if (line && !line.startsWith('#')) {
-      const absUrl = new URL(line, masterManifestUrl).toString();
-      let label = 'unknown';
-      if (line.includes('1080') || (currentResolution && currentResolution.includes('1080'))) {
-        label = '1080p';
-      } else if (line.includes('720') || (currentResolution && currentResolution.includes('720'))) {
-        label = '720p';
-      } else if (line.includes('360') || (currentResolution && currentResolution.includes('360'))) {
-        label = '360p';
-      } else if (currentResolution) {
-        label = currentResolution.split('x')[1] + 'p';
-      } else {
-        label = line.split('.')[0];
-      }
-
-      qualities[label] = {
-        url: absUrl,
-        resolution: currentResolution || 'Unknown',
-        referer: manifestReferer
-      };
-      currentResolution = '';
+  const qualities = {
+    '1080p': {
+      url: baseUrl + '1080p.m3u8',
+      resolution: '1920x1080',
+      referer: manifestReferer
+    },
+    '720p': {
+      url: baseUrl + '720p.m3u8',
+      resolution: '1280x720',
+      referer: manifestReferer
+    },
+    '360p': {
+      url: baseUrl + '360p.m3u8',
+      resolution: '640x360',
+      referer: manifestReferer
     }
-  }
+  };
 
   return qualities;
 }
@@ -587,6 +640,76 @@ async function parseFilterOptions() {
     cachedFilters = fallback;
     return fallback;
   }
+}
+
+async function parseSchedule() {
+  const url = "https://www.alpha-hen.com/%e0%b8%95%e0%b8%b2%e0%b8%a3%e0%b8%b2%e0%b8%87%e0%b8%ad%e0%b8%b1%e0%b8%9e%e0%b9%80%e0%b8%94%e0%b8%97%e0%b8%ad%e0%b8%99%e0%b8%b4%e0%b9%80%e0%b8%a1%e0%b8%b0/";
+  const res = await fetch(url, { headers: HEADERS });
+  const html = await res.text();
+  
+  const schedule = [];
+  
+  const sectionRegex = /<section[^>]+class="[^"]*ez-month[^"]*"[^>]*>([\s\S]*?)<\/section>/g;
+  let sectionMatch;
+  
+  while ((sectionMatch = sectionRegex.exec(html)) !== null) {
+    const sectionHtml = sectionMatch[0];
+    const sectionContent = sectionMatch[1];
+    
+    const isPast = /class="[^"]*is-past[^"]*"/i.test(sectionHtml) || /class='[^']*is-past[^']*'/i.test(sectionHtml);
+    
+    const monthTitleMatch = sectionContent.match(/<h2[^>]+class="[^"]*ez-month-title[^"]*"[^>]*>([\s\S]*?)<\/h2>/i);
+    const monthName = monthTitleMatch ? monthTitleMatch[1].replace(/<[^>]*>/g, '').trim() : "Unknown";
+    
+    const seriesItems = [];
+    const cardRegex = /<article[^>]+class="[^"]*ez-show-card[^"]*"[^>]*>([\s\S]*?)<\/article>/g;
+    let cardMatch;
+    
+    while ((cardMatch = cardRegex.exec(sectionContent)) !== null) {
+      const cardContent = cardMatch[1];
+      
+      const hrefMatch = cardContent.match(/href="([^"]*)"/i) || cardContent.match(/href='([^']*)'/i);
+      const urlPath = hrefMatch ? hrefMatch[1].trim() : "#";
+      
+      const titleMatch = cardContent.match(/title="([^"]*)"/i) || 
+                         cardContent.match(/title='([^']*)'/i) || 
+                         cardContent.match(/<h3[^>]+class="[^"]*ez-show-title[^"]*"[^>]*>([\s\S]*?)<\/h3>/i);
+      const title = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim() : "";
+      
+      const imgMatch = cardContent.match(/<img[^>]+src="([^"]*)"/i) || 
+                       cardContent.match(/<img[^>]+src='([^']*)'/i) ||
+                       cardContent.match(/data-src="([^"]*)"/i) || 
+                       cardContent.match(/data-src='([^']*)'/i);
+      let thumbnail = imgMatch ? imgMatch[1].trim() : "";
+      if (thumbnail && thumbnail.startsWith('//')) {
+        thumbnail = 'https:' + thumbnail;
+      }
+      
+      const epMatch = cardContent.match(/class="[^"]*ez-show-ep[^"]*"[^>]*>([\s\S]*?)<\/span>/i) ||
+                      cardContent.match(/class='[^']*ez-show-ep[^']*'[^>]*>([\s\S]*?)<\/span>/i);
+      const episode = epMatch ? epMatch[1].replace(/<[^>]*>/g, '').trim() : "";
+      
+      const releaseMatch = cardContent.match(/class="[^"]*ez-show-release[^"]*"[^>]*>([\s\S]*?)<\/span>/i) ||
+                            cardContent.match(/class='[^']*ez-show-release[^']*'[^>]*>([\s\S]*?)<\/span>/i);
+      const releaseDate = releaseMatch ? releaseMatch[1].replace(/<[^>]*>/g, '').trim() : "";
+      
+      seriesItems.push({
+        title,
+        url: urlPath,
+        thumbnail,
+        episode,
+        releaseDate
+      });
+    }
+    
+    schedule.push({
+      month: monthName,
+      isPast,
+      results: seriesItems
+    });
+  }
+  
+  return schedule;
 }
 
 function getIndexHtml() {
